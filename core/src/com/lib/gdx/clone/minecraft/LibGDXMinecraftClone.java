@@ -1,8 +1,6 @@
 package com.lib.gdx.clone.minecraft;
 
-import com.badlogic.gdx.ApplicationAdapter;
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.InputProcessor;
+import com.badlogic.gdx.*;
 import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.graphics.g2d.Sprite;
@@ -10,7 +8,9 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g3d.*;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
+import com.badlogic.gdx.graphics.g3d.utils.FirstPersonCameraController;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
+import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 
@@ -32,17 +32,27 @@ public class LibGDXMinecraftClone extends ApplicationAdapter implements InputPro
 
     float rotation = 0f;
 
+    //camera movement
+    boolean mouseGrabbed = false;
+    private float rotSpeed = 0.2f;
+    private final Vector3 camVec = new Vector3();
+    private FirstPersonCameraController cameraController;
+
 
 	@Override
 	public void create () {
 	    assetManager = new AssetManager();
 	    viewport = new ExtendViewport(640, 480);
 	    camera = new PerspectiveCamera(70, viewport.getWorldWidth(), viewport.getWorldHeight());
-        camera.position.set(10f, 10f, 10f);
+        camera.position.set(10f, 0, 10f);
         camera.lookAt(0,0,0);
         camera.near = 1f;
         camera.far = 300f;
 	    camera.update();
+
+	    cameraController = new FirstPersonCameraController(camera);
+
+	    Gdx.input.setInputProcessor(new InputMultiplexer(this, cameraController));
 
 	    loadAssets();
 
@@ -89,6 +99,9 @@ public class LibGDXMinecraftClone extends ApplicationAdapter implements InputPro
 		Gdx.gl.glClearColor(1, 0, 0, 1);
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT| GL20.GL_DEPTH_BUFFER_BIT);
 		camera.update();
+		if(mouseGrabbed) {
+            cameraController.update();
+        }
 
 
 		modelBatch.begin(camera);
@@ -127,6 +140,14 @@ public class LibGDXMinecraftClone extends ApplicationAdapter implements InputPro
 
     @Override
     public boolean keyUp(int keycode) {
+	    if(keycode == Input.Keys.G){
+	        mouseGrabbed = !mouseGrabbed;
+	        if(mouseGrabbed){
+	            Gdx.input.setCursorCatched(true);
+            }else{
+	            Gdx.input.setCursorCatched(false);
+            }
+        }
         return false;
     }
 
@@ -152,6 +173,13 @@ public class LibGDXMinecraftClone extends ApplicationAdapter implements InputPro
 
     @Override
     public boolean mouseMoved(int screenX, int screenY) {
+        if(mouseGrabbed){
+            float deltaX = -Gdx.input.getDeltaX() * rotSpeed;
+            float deltaY = -Gdx.input.getDeltaY() * rotSpeed;
+            camera.direction.rotate(camera.up, deltaX);
+            camVec.set(camera.direction).crs(camera.up).nor();
+            camera.direction.rotate(camVec, deltaY);
+        }
         return false;
     }
 
