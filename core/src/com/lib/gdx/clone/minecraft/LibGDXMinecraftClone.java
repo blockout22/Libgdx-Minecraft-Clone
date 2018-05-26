@@ -10,7 +10,9 @@ import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
 import com.badlogic.gdx.graphics.g3d.utils.FirstPersonCameraController;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.math.collision.BoundingBox;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 
@@ -38,6 +40,9 @@ public class LibGDXMinecraftClone extends ApplicationAdapter implements InputPro
     private final Vector3 camVec = new Vector3();
     private FirstPersonCameraController cameraController;
 
+    private Array<Chunk> chunks = new Array<Chunk>();
+    public float renderDistance = 50f;
+
 
 	@Override
 	public void create () {
@@ -46,8 +51,8 @@ public class LibGDXMinecraftClone extends ApplicationAdapter implements InputPro
 	    camera = new PerspectiveCamera(70, viewport.getWorldWidth(), viewport.getWorldHeight());
         camera.position.set(10f, 0, 10f);
         camera.lookAt(0,0,0);
-        camera.near = 1f;
-        camera.far = 300f;
+        camera.near = 0.1f;
+        camera.far = renderDistance;
 	    camera.update();
 
 	    cameraController = new FirstPersonCameraController(camera);
@@ -66,8 +71,13 @@ public class LibGDXMinecraftClone extends ApplicationAdapter implements InputPro
 	    modelBatch = new ModelBatch();
 
 	    ModelBuilder modelBuilder = new ModelBuilder();
-	    model = modelBuilder.createBox(5f, 5f, 5f, new Material(ColorAttribute.createDiffuse(Color.GREEN)), VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal);
+	    model = modelBuilder.createBox(1f, 1f, 1f, new Material(), VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal);
 	    instance = new ModelInstance(model);
+
+	    chunks.add(new Chunk(0, 0, model));
+
+	    Gdx.gl.glEnable(GL20.GL_CULL_FACE);
+	    Gdx.gl.glCullFace(GL20.GL_BACK);
 
 	}
 
@@ -105,17 +115,27 @@ public class LibGDXMinecraftClone extends ApplicationAdapter implements InputPro
 
 
 		modelBatch.begin(camera);
-		modelBatch.render(instance, environment);
+//		modelBatch.render(instance, environment);
+        //loop through chunks check if chunk is within distance of player then tell the chunk to render all the blocks inside of that chunk
+        for(int i = chunks.size - 1; i >= 0; i--){
+            float posX = camera.position.x;
+            float posZ = camera.position.z;
+            if(chunks.get(i).inView(camera)){
+                chunks.get(i).update(camera, modelBatch, environment);
+            }
+        }
 		modelBatch.end();
 
         rotation += 0.9f;
 
-        float width = 100;
-        float height = 100;
+        float width = 50;
+        float height = 50;
 
 		batch.begin();
 		batch.draw(crosshair, (Gdx.graphics.getWidth() / 2) - (width / 2), (Gdx.graphics.getHeight() / 2) - (height / 2), width / 2, height / 2, width, height, 1, 1, rotation);
 		batch.end();
+
+		Gdx.graphics.setTitle(Gdx.graphics.getFramesPerSecond() + "");
 	}
 
     @Override
